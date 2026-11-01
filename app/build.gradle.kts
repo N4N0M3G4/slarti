@@ -25,5 +25,8 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("org.maplibre.gl:android-sdk:11.5.2")
     implementation("com.google.android.gms:play-services-location:21.3.0")
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    testImplementation("org.json:json:20240303")
     testImplementation("junit:junit:4.13.2")
 }
