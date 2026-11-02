@@ -36,6 +36,8 @@ class MapController {
     internal var pin: Pin? = null
     /** Tapped feature: ("fossil", oid, cid, name) or ("capture", id, "", ""). */
     var onSites: (List<com.georecon.app.data.Site>) -> Unit = {}
+    /** Tap on empty map (no fossil/photo hit): lat, lon. */
+    var onEmptyTap: (Double, Double) -> Unit = { _, _ -> }
     var onFeatureTap: (kind: String, id: String, cid: String, name: String) -> Unit = { _, _, _, _ -> }
 
     /** Gestures zoom around the focal point; point it at the pin while locked. */
@@ -84,7 +86,10 @@ fun MapScreen(
                 val pt = map.projection.toScreenLocation(ll)
                 val r = 28f * ctx.resources.displayMetrics.density / 2
                 val hit = map.queryRenderedFeatures(RectF(pt.x - r, pt.y - r, pt.x + r, pt.y + r), "caps-layer", "pbdb-layer").firstOrNull()
-                    ?: return@addOnMapClickListener false
+                if (hit == null) {
+                    controller.onEmptyTap(ll.latitude, ll.longitude)
+                    return@addOnMapClickListener false
+                }
                 val p = hit.properties() ?: return@addOnMapClickListener false
                 fun str(k: String) = p.get(k)?.takeIf { it.isJsonPrimitive }?.asString ?: ""
                 if (p.has("capId")) controller.onFeatureTap("capture", str("capId"), "", "")

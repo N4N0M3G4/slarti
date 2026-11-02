@@ -80,6 +80,9 @@ fun GeoReconApp() = SpyTheme {
         else tappedFossil = Triple(id, cid, name)
     }
     mapController.onSites = { sites = it }
+    var tappedUnit by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+    var showLegend by remember { mutableStateOf(false) }
+    mapController.onEmptyTap = { lat, lon -> if (geology) tappedUnit = lat to lon }
 
     fun setPin(p: Pin?) {
         pin = p
@@ -140,6 +143,7 @@ fun GeoReconApp() = SpyTheme {
             basemap = basemap, geologyOpacity = geoOpacity, fossilOpacity = fossilOpacity, captures = captures, modifier = Modifier.fillMaxSize(),
         )
         if (fog) FogOverlay()
+        tappedUnit?.let { (lat, lon) -> GeoUnitDialog(lat, lon) { tappedUnit = null } }
         tappedCapture?.let { c -> CaptureDialog(c, java.io.File(CaptureStore.dir(ctx), "${c.id}.jpg")) { tappedCapture = null } }
         tappedFossil?.let { (oid, cid, name) ->
             FossilDialog(oid, name, sites.filter { cid.isNotEmpty() && it.collectionId == cid }) { tappedFossil = null }
@@ -180,8 +184,10 @@ fun GeoReconApp() = SpyTheme {
                         }
                     }
                     Spacer(Modifier.weight(1f))
+                    HudButton("KEY", active = showLegend) { showLegend = !showLegend }
                     HudButton(if (showLayers) "LAYERS ▾" else "LAYERS ▸", active = showLayers) { showLayers = !showLayers }
                 }
+                if (showLegend) Legend()
                 if (showLayers) {
                     LayerRow("GEO", geology, { geology = it }, geoOpacity) { geoOpacity = it; ui.edit().putFloat("op.geo", it).apply() }
                     LayerRow("FOSSIL", fossils, { fossils = it }, fossilOpacity) { fossilOpacity = it; ui.edit().putFloat("op.fossil", it).apply() }

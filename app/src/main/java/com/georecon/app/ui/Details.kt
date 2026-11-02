@@ -25,6 +25,9 @@ import coil.compose.AsyncImage
 import com.georecon.app.data.Capture
 import com.georecon.app.data.FossilDetails
 import com.georecon.app.data.FossilInfo
+import com.georecon.app.data.GeoLookups
+import com.georecon.app.data.GeoUnit
+import com.georecon.app.data.WikiSummary
 import com.georecon.app.data.Site
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -102,6 +105,12 @@ fun FossilDialog(oid: String, name: String, siblings: List<Site>, onDismiss: () 
                 Field("Lithology", d.lithology); Field("Environment", d.environment); Field("Collection", d.collection)
                 Field("Place", d.place); Field("Precision", d.precision); Field("Reference", d.reference)
                 Link("PBDB occurrence ↗", d.occUrl); Link("PBDB collection ↗", d.collUrl)
+                var wiki by remember(d.taxon) { mutableStateOf<WikiSummary?>(null) }
+                LaunchedEffect(d.taxon) { wiki = withContext(Dispatchers.IO) { GeoLookups.wikiSummary(d.taxon) } }
+                wiki?.let { w ->
+                    Text(w.extract, color = Color(0xFFBFEFFF), fontFamily = Mono, fontSize = 11.sp)
+                    Link("Wikipedia: ${w.title} · CC BY-SA 4.0", w.url)
+                }
                 d.silhouette?.let { Text("Silhouette: PhyloPic · ${it.credit} · ${it.license}", color = Spy.CyanDim, fontFamily = Mono, fontSize = 10.sp) }
                 if (d.images.isNotEmpty()) {
                     Text("SPECIMEN PHOTOS (GBIF)", color = Spy.Amber, fontFamily = Mono, fontSize = 11.sp)
@@ -120,4 +129,43 @@ fun FossilDialog(oid: String, name: String, siblings: List<Site>, onDismiss: () 
             }
         }
     }
+}
+
+@Composable
+fun GeoUnitDialog(lat: Double, lon: Double, onDismiss: () -> Unit) {
+    var unit by remember { mutableStateOf<GeoUnit?>(null) }
+    var done by remember { mutableStateOf(false) }
+    LaunchedEffect(lat, lon) { unit = withContext(Dispatchers.IO) { GeoLookups.unitAt(lat, lon) }; done = true }
+    SpyDialog("GEOLOGIC UNIT", onDismiss) {
+        val u = unit
+        when {
+            !done -> Text("Asking Macrostrat…", color = Spy.CyanDim, fontFamily = Mono, fontSize = 11.sp)
+            u == null -> Text("No mapped unit here (or offline).", color = Spy.Amber, fontFamily = Mono, fontSize = 11.sp)
+            else -> {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box(Modifier.size(18.dp).background(Color(u.color)).border(1.dp, Color(0xFFBFEFFF)))
+                    Text(u.name, color = Spy.Amber, fontFamily = Mono, fontSize = 14.sp)
+                }
+                Field("Strat. name", u.strat); Field("Age", u.age); Field("Lithology", u.lith)
+                Field("Description", u.description); Field("Point", "%.5f, %.5f".format(lat, lon))
+                Link("Macrostrat ↗ · source ${u.sourceId} · CC BY 4.0", "https://macrostrat.org/map/loc/%.4f/%.4f".format(lon, lat))
+            }
+        }
+    }
+}
+
+/** Collapsible legend content: what each symbol means. */
+@Composable
+fun Legend() = Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    @Composable
+    fun Item(swatch: @Composable () -> Unit, text: String) = Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(Modifier.size(16.dp), contentAlignment = androidx.compose.ui.Alignment.Center) { swatch() }
+        Text(text, color = Color(0xFFBFEFFF), fontFamily = Mono, fontSize = 10.sp)
+    }
+    val dot = androidx.compose.foundation.shape.CircleShape
+    Item({ Box(Modifier.size(14.dp).background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xFFFFFF00), Color(0xFFF4A460), Color(0xFF9ACD32))))) },
+        "Geology: each color is one rock unit. Tap the map for name, age, rock type.")
+    Item({ Box(Modifier.size(12.dp).border(2.dp, Spy.Cyan, dot).background(Color.Black, dot)) }, "Fossil occurrence (PBDB). Tap for details + pictures.")
+    Item({ Box(Modifier.size(12.dp).background(Spy.Amber, dot).border(2.dp, Color.Black, dot)) }, "Your photo. Tap to view.")
+    Item({ Box(Modifier.size(16.dp).background(Spy.Amber, dot).border(3.dp, Color.Black, dot)) }, "Current pin (search or ◎ GPS).")
 }
