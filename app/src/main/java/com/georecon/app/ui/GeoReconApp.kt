@@ -42,6 +42,7 @@ import com.georecon.app.offline.AreaCache
 import com.georecon.app.map.MapScreen
 import com.georecon.app.pin.Pin
 import com.georecon.app.pin.PinStore
+import com.georecon.app.scan.ScanScreen
 import com.georecon.app.sync.UploadWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -82,6 +83,14 @@ fun GeoReconApp() = SpyTheme {
     mapController.onSites = { sites = it }
     var tappedUnit by remember { mutableStateOf<Pair<Double, Double>?>(null) }
     var showLegend by remember { mutableStateOf(false) }
+    var scanning by remember { mutableStateOf(false) }
+    val camPerm = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+        if (ok) scanning = true else status = "CAMERA PERMISSION DENIED"
+    }
+    if (scanning) {
+        ScanScreen { msg -> scanning = false; status = msg }
+        return@SpyTheme
+    }
     mapController.onEmptyTap = { lat, lon -> if (geology) tappedUnit = lat to lon }
 
     fun setPin(p: Pin?) {
@@ -193,8 +202,13 @@ fun GeoReconApp() = SpyTheme {
                     LayerRow("FOSSIL", fossils, { fossils = it }, fossilOpacity) { fossilOpacity = it; ui.edit().putFloat("op.fossil", it).apply() }
                     Row(verticalAlignment = Alignment.CenterVertically) { Toggle("FOG", fog) { fog = it } }
                 }
-                OutlinedButton(onClick = { perms.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.CAMERA)) }, modifier = Modifier.fillMaxWidth()) {
-                    Text("CAPTURE", fontFamily = Mono, color = Spy.Amber)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OutlinedButton(onClick = { perms.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.CAMERA)) }, modifier = Modifier.weight(1f)) {
+                        Text("CAPTURE", fontFamily = Mono, color = Spy.Amber)
+                    }
+                    OutlinedButton(onClick = { camPerm.launch(Manifest.permission.CAMERA) }, modifier = Modifier.weight(1f)) {
+                        Text("SCAN OBJECT", fontFamily = Mono, color = Spy.Amber)
+                    }
                 }
             }
         }

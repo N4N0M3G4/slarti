@@ -36,6 +36,7 @@ dependencies {
     implementation("androidx.exifinterface:exifinterface:1.3.7")
     implementation("androidx.work:work-runtime-ktx:2.9.1")
     implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("com.google.ar:core:1.45.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     testImplementation("org.json:json:20240303")
     testImplementation("junit:junit:4.13.2")

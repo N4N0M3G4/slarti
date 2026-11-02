@@ -4,6 +4,7 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-permission android:name="android.permission.VIBRATE" />
     <application android:label="GEO-RECON" android:theme="@style/Theme.GeoRecon"
         android:networkSecurityConfig="@xml/network_security_config">
         <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop">
@@ -19,6 +20,8 @@
                 <data android:scheme="georecon" android:host="pair" />
             </intent-filter>
         </activity>
+        <!-- ARCore is optional: only the guided object scan needs it (motion tracking, no cloud). -->
+        <meta-data android:name="com.google.ar.core" android:value="optional" />
         <provider android:name="androidx.core.content.FileProvider" android:authorities="com.georecon.app.files" android:exported="false" android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
