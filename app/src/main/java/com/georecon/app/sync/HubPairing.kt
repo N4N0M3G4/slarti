@@ -6,10 +6,6 @@ import java.net.URLDecoder
 /** Hub address + token, parsed from the pairing QR (georecon://pair?url=...&token=...). */
 data class HubPairing(val baseUrl: String, val token: String) {
     companion object {
-        private val PRIVATE_HOST = Regex(
-            """^(127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)"""
-        )
-
         /** Returns null for anything that is not a LAN http(s) hub. */
         fun parse(uri: String): HubPairing? = runCatching {
             val u = URI(uri)
@@ -21,7 +17,7 @@ data class HubPairing(val baseUrl: String, val token: String) {
             val base = URI(q["url"] ?: return null)
             val token = q["token"]?.takeIf { it.length >= 16 } ?: return null
             if (base.scheme !in setOf("http", "https")) return null
-            if (!PRIVATE_HOST.containsMatchIn(base.host ?: "")) return null
+            if (!NetGuard.isPrivateHost(base.host)) return null
             HubPairing(q["url"]!!.trimEnd('/'), token)
         }.getOrNull()
     }

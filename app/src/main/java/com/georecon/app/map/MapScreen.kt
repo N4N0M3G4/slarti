@@ -44,7 +44,7 @@ fun MapScreen(showGeology: Boolean, showFossils: Boolean, modifier: Modifier = M
     LaunchedEffect(style, showGeology) {
         val s = style ?: return@LaunchedEffect
         if (s.getSource("geo") == null) {
-            s.addSource(RasterSource("geo", TileSet("2.2.0", Sources.MACROSTRAT_CARTO).apply { attribution = "Macrostrat (CC-BY 4.0)" }, 256))
+            s.addSource(RasterSource("geo", TileSet("2.2.0", Sources.MACROSTRAT_CARTO).apply { attribution = "Macrostrat (CC-BY 4.0)" }, 512))
             s.addLayer(RasterLayer("geo-layer", "geo").withProperties(rasterOpacity(0.6f)))
         }
         s.getLayer("geo-layer")?.setProperties(visibility(if (showGeology) "visible" else "none"))

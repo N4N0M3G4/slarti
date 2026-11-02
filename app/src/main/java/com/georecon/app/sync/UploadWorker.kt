@@ -13,7 +13,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.HttpURLConnection
-import java.net.URL
 
 object HubPrefs {
     private const val NAME = "hub"
@@ -47,7 +46,7 @@ class UploadWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
     }
 
     private fun put(hub: HubPairing, path: String, file: File, type: String): Boolean = runCatching {
-        val c = URL("${hub.baseUrl}/api/captures/$path").openConnection() as HttpURLConnection
+        val c = NetGuard.check("${hub.baseUrl}/api/captures/$path", hub.baseUrl).openConnection() as HttpURLConnection
         c.requestMethod = "PUT"; c.doOutput = true; c.connectTimeout = 8_000; c.readTimeout = 30_000
         c.setRequestProperty("Authorization", "Bearer ${hub.token}")
         c.setRequestProperty("Content-Type", type)

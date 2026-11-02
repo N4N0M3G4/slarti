@@ -2,7 +2,6 @@ package com.georecon.app.data
 
 import org.json.JSONObject
 import java.net.HttpURLConnection
-import java.net.URL
 
 /** Paleobiology Database occurrences (CC-BY 4.0). */
 object Pbdb {
@@ -21,7 +20,7 @@ object Pbdb {
 
     /** Blocking fetch; call off the main thread. */
     fun fetch(minLon: Double, minLat: Double, maxLon: Double, maxLat: Double): List<Site> {
-        val conn = URL(Sources.pbdbOccurrences(minLon, minLat, maxLon, maxLat)).openConnection() as HttpURLConnection
+        val conn = com.georecon.app.sync.NetGuard.check(Sources.pbdbOccurrences(minLon, minLat, maxLon, maxLat)).openConnection() as HttpURLConnection
         conn.connectTimeout = 10_000; conn.readTimeout = 15_000
         return conn.inputStream.bufferedReader().use { parse(it.readText()) }
     }
