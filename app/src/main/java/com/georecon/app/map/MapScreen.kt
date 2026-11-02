@@ -59,6 +59,9 @@ fun MapScreen(
     showFossils: Boolean,
     pin: Pin?,
     controller: MapController,
+    basemap: Basemap,
+    geologyOpacity: Float,
+    fossilOpacity: Float,
     modifier: Modifier = Modifier,
 ) {
     val ctx = LocalContext.current
@@ -72,22 +75,29 @@ fun MapScreen(
             controller.map = map
             map.addOnCameraIdleListener { controller.updateFocal() }
             map.cameraPosition = CameraPosition.Builder().target(pin?.let { LatLng(it.lat, it.lon) } ?: HOME).zoom(13.0).build()
-            map.setStyle(Style.Builder().fromUri("https://demotiles.maplibre.org/style.json")) { style = it }
         }
         sites = withContext(Dispatchers.IO) {
             runCatching { Pbdb.fetch(HOME.longitude - 0.05, HOME.latitude - 0.05, HOME.longitude + 0.05, HOME.latitude + 0.05) }
                 .getOrDefault(emptyList())
         }
     }
-    LaunchedEffect(style, showGeology) {
+    // Basemap: a new style drops our sources, so the overlay effects below re-add them.
+    LaunchedEffect(basemap.id) {
+        style = null
+        mapView.getMapAsync { map ->
+            val b = if (basemap.styleJson != null) Style.Builder().fromJson(basemap.styleJson) else Style.Builder().fromUri(basemap.styleUrl!!)
+            map.setStyle(b) { style = it }
+        }
+    }
+    LaunchedEffect(style, showGeology, geologyOpacity) {
         val s = style ?: return@LaunchedEffect
         if (s.getSource("geo") == null) {
             s.addSource(RasterSource("geo", TileSet("2.2.0", Sources.MACROSTRAT_CARTO).apply { attribution = "Macrostrat (CC-BY 4.0)" }, 512))
-            s.addLayer(RasterLayer("geo-layer", "geo").withProperties(rasterOpacity(0.6f)))
+            s.addLayer(RasterLayer("geo-layer", "geo"))
         }
-        s.getLayer("geo-layer")?.setProperties(visibility(if (showGeology) "visible" else "none"))
+        s.getLayer("geo-layer")?.setProperties(visibility(if (showGeology) "visible" else "none"), rasterOpacity(geologyOpacity))
     }
-    LaunchedEffect(style, sites, showFossils) {
+    LaunchedEffect(style, sites, showFossils, fossilOpacity) {
         val s = style ?: return@LaunchedEffect
         val json = Pbdb.toGeoJson(sites)
         (s.getSourceAs<GeoJsonSource>("pbdb") ?: GeoJsonSource("pbdb").also { s.addSource(it) }).setGeoJson(json)
@@ -96,7 +106,7 @@ fun MapScreen(
                 circleRadius(6f), circleColor("#00000000"), circleStrokeColor("#3FE0FF"), circleStrokeWidth(2f),
             )
         )
-        s.getLayer("pbdb-layer")?.setProperties(visibility(if (showFossils) "visible" else "none"))
+        s.getLayer("pbdb-layer")?.setProperties(visibility(if (showFossils) "visible" else "none"), circleStrokeOpacity(fossilOpacity))
     }
     // Current pin: amber dot. While locked, pinch/double-tap zoom pivots on the pin.
     LaunchedEffect(style, pin) {

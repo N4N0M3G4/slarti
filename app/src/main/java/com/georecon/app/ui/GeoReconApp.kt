@@ -32,7 +32,10 @@ import androidx.core.content.FileProvider
 import com.georecon.app.capture.CaptureStore
 import com.georecon.app.capture.readLocation
 import com.georecon.app.capture.readOrientation
+import com.georecon.app.BuildConfig
+import com.georecon.app.map.Basemaps
 import com.georecon.app.map.MapController
+import com.georecon.app.offline.AreaCache
 import com.georecon.app.map.MapScreen
 import com.georecon.app.pin.Pin
 import com.georecon.app.pin.PinStore
@@ -57,6 +60,13 @@ fun GeoReconApp() = SpyTheme {
     var pin by remember { mutableStateOf(pinStore.load()) }
     val mapController = remember { MapController() }
     var pending by remember { mutableStateOf<Pair<String, File>?>(null) }
+    val ui = remember { ctx.getSharedPreferences("ui", android.content.Context.MODE_PRIVATE) }
+    val basemaps = remember { Basemaps.all(BuildConfig.ARCGIS_API_KEY) }
+    var basemap by remember { mutableStateOf(Basemaps.pick(basemaps, ui.getString("basemap", null))) }
+    var geoOpacity by remember { mutableStateOf(ui.getFloat("op.geo", 0.4f)) }
+    var fossilOpacity by remember { mutableStateOf(ui.getFloat("op.fossil", 0.25f)) }
+    var showLayers by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { AreaCache.applyAmbientCap(ctx) }
 
     fun setPin(p: Pin?) {
         pin = p
@@ -111,7 +121,10 @@ fun GeoReconApp() = SpyTheme {
     }
 
     Box(Modifier.fillMaxSize().background(Spy.Black)) {
-        MapScreen(showGeology = geology, showFossils = fossils, pin = pin, controller = mapController, modifier = Modifier.fillMaxSize())
+        MapScreen(
+            showGeology = geology, showFossils = fossils, pin = pin, controller = mapController,
+            basemap = basemap, geologyOpacity = geoOpacity, fossilOpacity = fossilOpacity, modifier = Modifier.fillMaxSize(),
+        )
         if (fog) FogOverlay()
         Column(
             // Edge-to-edge: keep the HUD clear of the status bar, cutouts and nav bar.
@@ -130,14 +143,31 @@ fun GeoReconApp() = SpyTheme {
                     onRecenter = { pin?.let { mapController.flyTo(it) } },
                     onZoom = { d -> mapController.zoom(d, pin) },
                     onClear = { setPin(null) },
+                    onSaveArea = {
+                        pin?.let { p ->
+                            val url = basemap.styleUrl ?: Basemaps.all("").first().styleUrl!!
+                            AreaCache.saveAreaAround(ctx, p, url) { msg -> status = msg }
+                        }
+                    },
                 )
             }
             Column(
                 Modifier.fillMaxWidth().border(1.dp, Spy.CyanDim).background(Color(0xCC0B1014)).padding(8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Toggle("GEO", geology) { geology = it }; Toggle("FOSSIL", fossils) { fossils = it }; Toggle("FOG", fog) { fog = it }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    basemaps.forEach { b ->
+                        HudButton(b.name, active = b.id == basemap.id, enabled = b.available) {
+                            basemap = b; ui.edit().putString("basemap", b.id).apply()
+                        }
+                    }
+                    Spacer(Modifier.weight(1f))
+                    HudButton(if (showLayers) "LAYERS ▾" else "LAYERS ▸", active = showLayers) { showLayers = !showLayers }
+                }
+                if (showLayers) {
+                    LayerRow("GEO", geology, { geology = it }, geoOpacity) { geoOpacity = it; ui.edit().putFloat("op.geo", it).apply() }
+                    LayerRow("FOSSIL", fossils, { fossils = it }, fossilOpacity) { fossilOpacity = it; ui.edit().putFloat("op.fossil", it).apply() }
+                    Row(verticalAlignment = Alignment.CenterVertically) { Toggle("FOG", fog) { fog = it } }
                 }
                 OutlinedButton(onClick = { perms.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.CAMERA)) }, modifier = Modifier.fillMaxWidth()) {
                     Text("CAPTURE", fontFamily = Mono, color = Spy.Amber)
@@ -180,7 +210,7 @@ private fun SearchBar(onSearch: (String) -> Unit, onGps: () -> Unit) {
 }
 
 @Composable
-private fun PinBar(pin: Pin?, onLock: () -> Unit, onRecenter: () -> Unit, onZoom: (Int) -> Unit, onClear: () -> Unit) {
+private fun PinBar(pin: Pin?, onLock: () -> Unit, onRecenter: () -> Unit, onZoom: (Int) -> Unit, onClear: () -> Unit, onSaveArea: () -> Unit) {
     if (pin == null) return
     Column(
         Modifier.fillMaxWidth().border(1.dp, Spy.CyanDim).background(Color(0xCC0B1014)).padding(6.dp),
@@ -194,16 +224,29 @@ private fun PinBar(pin: Pin?, onLock: () -> Unit, onRecenter: () -> Unit, onZoom
             HudButton("−", onClick = { onZoom(-1) })
             HudButton("CLEAR", onClick = onClear)
         }
+        HudButton("SAVE 3 KM AREA OFFLINE", onClick = onSaveArea)
     }
 }
 
 @Composable
-private fun HudButton(text: String, active: Boolean = false, onClick: () -> Unit) =
+private fun HudButton(text: String, active: Boolean = false, enabled: Boolean = true, onClick: () -> Unit) =
     OutlinedButton(
-        onClick = onClick, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+        onClick = onClick, enabled = enabled, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
         colors = ButtonDefaults.outlinedButtonColors(containerColor = if (active) Spy.Cyan else Color.Transparent),
         modifier = Modifier.heightIn(min = 36.dp),
     ) { Text(text, fontFamily = Mono, fontSize = 11.sp, color = if (active) Spy.Black else Spy.Cyan, maxLines = 1) }
+
+@Composable
+private fun LayerRow(label: String, on: Boolean, setOn: (Boolean) -> Unit, opacity: Float, setOpacity: (Float) -> Unit) =
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Toggle(label, on, setOn)
+        Slider(
+            value = opacity, onValueChange = setOpacity, valueRange = 0f..1f,
+            colors = SliderDefaults.colors(thumbColor = Spy.Cyan, activeTrackColor = Spy.Cyan, inactiveTrackColor = Spy.CyanDim),
+            modifier = Modifier.weight(1f).padding(start = 8.dp).semantics { contentDescription = "$label opacity" },
+        )
+        Text("${(opacity * 100).toInt()}%", color = Spy.Cyan, fontFamily = Mono, fontSize = 11.sp, modifier = Modifier.width(40.dp))
+    }
 
 /** Placeholder fog: dark vignette with a clear disc at center (user position). */
 @Composable
