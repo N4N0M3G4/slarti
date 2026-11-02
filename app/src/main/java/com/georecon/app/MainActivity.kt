@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import com.georecon.app.sync.HubPairing
 import com.georecon.app.sync.HubPrefs
 import com.georecon.app.sync.UploadWorker
@@ -13,6 +14,7 @@ import org.maplibre.android.MapLibre
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         MapLibre.getInstance(this)
         handlePairing(intent)

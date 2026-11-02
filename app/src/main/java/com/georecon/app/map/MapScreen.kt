@@ -9,7 +9,12 @@ import com.georecon.app.data.Site
 import com.georecon.app.data.Sources
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import android.graphics.PointF
+import com.georecon.app.pin.Pin
+import com.georecon.app.pin.PinZoom
 import org.maplibre.android.camera.CameraPosition
+import org.maplibre.android.camera.CameraUpdateFactory
+import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
@@ -23,8 +28,39 @@ import org.maplibre.android.style.sources.TileSet
 /** Belair Dr / Belair Ct, Scotts Valley, near the find site. */
 val HOME = LatLng(37.0566, -122.0013)
 
+/** Imperative handle for HUD buttons (recenter, zoom around the pin). */
+class MapController {
+    internal var map: MapLibreMap? = null
+    internal var pin: Pin? = null
+
+    /** Gestures zoom around the focal point; point it at the pin while locked. */
+    internal fun updateFocal() {
+        val m = map ?: return
+        val p = pin
+        m.uiSettings.focalPoint = if (p?.locked == true)
+            m.projection.toScreenLocation(LatLng(p.lat, p.lon)).let { PointF(it.x, it.y) } else null
+    }
+    fun flyTo(pin: Pin, zoom: Double? = null) {
+        val m = map ?: return
+        m.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(pin.lat, pin.lon), zoom ?: maxOf(m.cameraPosition.zoom, 15.0)), 900)
+    }
+    /** Zoom one step; when locked, around the pin (pin stays centered). */
+    fun zoom(direction: Int, pin: Pin?) {
+        val m = map ?: return
+        val z = PinZoom.step(m.cameraPosition.zoom, direction)
+        if (pin?.locked == true) m.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(pin.lat, pin.lon), z), 300)
+        else m.animateCamera(CameraUpdateFactory.zoomTo(z), 300)
+    }
+}
+
 @Composable
-fun MapScreen(showGeology: Boolean, showFossils: Boolean, modifier: Modifier = Modifier) {
+fun MapScreen(
+    showGeology: Boolean,
+    showFossils: Boolean,
+    pin: Pin?,
+    controller: MapController,
+    modifier: Modifier = Modifier,
+) {
     val ctx = LocalContext.current
     val mapView = remember { MapView(ctx).apply { onCreate(null); onStart(); onResume() } }
     var style by remember { mutableStateOf<Style?>(null) }
@@ -33,7 +69,9 @@ fun MapScreen(showGeology: Boolean, showFossils: Boolean, modifier: Modifier = M
     AndroidView(factory = { mapView }, modifier = modifier)
     LaunchedEffect(Unit) {
         mapView.getMapAsync { map ->
-            map.cameraPosition = CameraPosition.Builder().target(HOME).zoom(13.0).build()
+            controller.map = map
+            map.addOnCameraIdleListener { controller.updateFocal() }
+            map.cameraPosition = CameraPosition.Builder().target(pin?.let { LatLng(it.lat, it.lon) } ?: HOME).zoom(13.0).build()
             map.setStyle(Style.Builder().fromUri("https://demotiles.maplibre.org/style.json")) { style = it }
         }
         sites = withContext(Dispatchers.IO) {
@@ -59,5 +97,20 @@ fun MapScreen(showGeology: Boolean, showFossils: Boolean, modifier: Modifier = M
             )
         )
         s.getLayer("pbdb-layer")?.setProperties(visibility(if (showFossils) "visible" else "none"))
+    }
+    // Current pin: amber dot. While locked, pinch/double-tap zoom pivots on the pin.
+    LaunchedEffect(style, pin) {
+        val s = style ?: return@LaunchedEffect
+        val json = pin?.let {
+            """{"type":"Feature","geometry":{"type":"Point","coordinates":[${it.lon},${it.lat}]},"properties":{}}"""
+        } ?: """{"type":"FeatureCollection","features":[]}"""
+        (s.getSourceAs<GeoJsonSource>("pin") ?: GeoJsonSource("pin").also { s.addSource(it) }).setGeoJson(json)
+        if (s.getLayer("pin-layer") == null) s.addLayer(
+            CircleLayer("pin-layer", "pin").withProperties(
+                circleRadius(9f), circleColor("#FFB238"), circleStrokeColor("#000000"), circleStrokeWidth(3f),
+            )
+        )
+        controller.pin = pin
+        controller.updateFocal()
     }
 }
