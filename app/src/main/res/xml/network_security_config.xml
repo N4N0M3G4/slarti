@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The hub runs on the home LAN over plain HTTP; requests are token-authenticated.
+     Cleartext is allowed only for private addresses checked in HubPairing. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

@@ -25,6 +25,7 @@ import com.georecon.app.capture.CaptureStore
 import com.georecon.app.capture.readLocation
 import com.georecon.app.capture.readOrientation
 import com.georecon.app.map.MapScreen
+import com.georecon.app.sync.UploadWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -49,6 +50,7 @@ fun GeoReconApp() = SpyTheme {
             val loc = if (hasLoc) readLocation(ctx) else null
             val o = readOrientation(ctx)
             val c = withContext(Dispatchers.IO) { CaptureStore.finalize(file, id, System.currentTimeMillis(), loc, o) }
+            UploadWorker.enqueue(ctx)
             status = if (loc == null) "SAVED ${c.id.take(8)} (NO GPS)" else "SAVED ${c.id.take(8)} ±${c.hAccM?.toInt()}m"
         }
     }
