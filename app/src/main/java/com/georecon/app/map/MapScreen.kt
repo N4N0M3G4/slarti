@@ -10,6 +10,8 @@ import com.georecon.app.data.Sources
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import android.graphics.PointF
+import android.graphics.RectF
+import com.georecon.app.data.Capture
 import com.georecon.app.pin.Pin
 import com.georecon.app.pin.PinZoom
 import org.maplibre.android.camera.CameraPosition
@@ -32,6 +34,9 @@ val HOME = LatLng(37.0566, -122.0013)
 class MapController {
     internal var map: MapLibreMap? = null
     internal var pin: Pin? = null
+    /** Tapped feature: ("fossil", oid, cid, name) or ("capture", id, "", ""). */
+    var onSites: (List<com.georecon.app.data.Site>) -> Unit = {}
+    var onFeatureTap: (kind: String, id: String, cid: String, name: String) -> Unit = { _, _, _, _ -> }
 
     /** Gestures zoom around the focal point; point it at the pin while locked. */
     internal fun updateFocal() {
@@ -62,6 +67,7 @@ fun MapScreen(
     basemap: Basemap,
     geologyOpacity: Float,
     fossilOpacity: Float,
+    captures: List<Capture> = emptyList(),
     modifier: Modifier = Modifier,
 ) {
     val ctx = LocalContext.current
@@ -74,12 +80,24 @@ fun MapScreen(
         mapView.getMapAsync { map ->
             controller.map = map
             map.addOnCameraIdleListener { controller.updateFocal() }
+            map.addOnMapClickListener { ll ->
+                val pt = map.projection.toScreenLocation(ll)
+                val r = 28f * ctx.resources.displayMetrics.density / 2
+                val hit = map.queryRenderedFeatures(RectF(pt.x - r, pt.y - r, pt.x + r, pt.y + r), "caps-layer", "pbdb-layer").firstOrNull()
+                    ?: return@addOnMapClickListener false
+                val p = hit.properties() ?: return@addOnMapClickListener false
+                fun str(k: String) = p.get(k)?.takeIf { it.isJsonPrimitive }?.asString ?: ""
+                if (p.has("capId")) controller.onFeatureTap("capture", str("capId"), "", "")
+                else controller.onFeatureTap("fossil", str("oid"), str("cid"), str("name"))
+                true
+            }
             map.cameraPosition = CameraPosition.Builder().target(pin?.let { LatLng(it.lat, it.lon) } ?: HOME).zoom(13.0).build()
         }
         sites = withContext(Dispatchers.IO) {
             runCatching { Pbdb.fetch(HOME.longitude - 0.05, HOME.latitude - 0.05, HOME.longitude + 0.05, HOME.latitude + 0.05) }
                 .getOrDefault(emptyList())
         }
+        controller.onSites(sites)
     }
     // Basemap: a new style drops our sources, so the overlay effects below re-add them.
     LaunchedEffect(basemap.id) {
@@ -107,6 +125,20 @@ fun MapScreen(
             )
         )
         s.getLayer("pbdb-layer")?.setProperties(visibility(if (showFossils) "visible" else "none"), circleStrokeOpacity(fossilOpacity))
+    }
+    // Your own captures (local files): amber squares-ish dots, tap for the photo.
+    LaunchedEffect(style, captures) {
+        val s = style ?: return@LaunchedEffect
+        val feats = captures.filter { it.lat.isFinite() && it.lon.isFinite() }.joinToString(",") {
+            """{"type":"Feature","geometry":{"type":"Point","coordinates":[${it.lon},${it.lat}]},"properties":{"capId":"${it.id}"}}"""
+        }
+        (s.getSourceAs<GeoJsonSource>("caps") ?: GeoJsonSource("caps").also { s.addSource(it) })
+            .setGeoJson("""{"type":"FeatureCollection","features":[$feats]}""")
+        if (s.getLayer("caps-layer") == null) s.addLayer(
+            CircleLayer("caps-layer", "caps").withProperties(
+                circleRadius(7f), circleColor("#FFB238"), circleStrokeColor("#000000"), circleStrokeWidth(2f),
+            )
+        )
     }
     // Current pin: amber dot. While locked, pinch/double-tap zoom pivots on the pin.
     LaunchedEffect(style, pin) {

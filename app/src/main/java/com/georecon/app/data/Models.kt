@@ -11,6 +11,7 @@ data class Capture(
 data class Site(
     val id: String, val name: String, val lat: Double, val lon: Double,
     val source: String, val formation: String?, val ageMa: Double?,
+    val collectionId: String? = null,
 )
 
 /** A hint at a subsurface feature, backed by captures. */

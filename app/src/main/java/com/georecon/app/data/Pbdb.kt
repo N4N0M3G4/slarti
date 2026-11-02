@@ -14,6 +14,7 @@ object Pbdb {
             if (lat.isNaN() || lon.isNaN()) null else Site(
                 id = r.optString("oid"), name = r.optString("tna"), lat = lat, lon = lon,
                 source = "pbdb", formation = r.optString("sfm").ifEmpty { null }, ageMa = null,
+                collectionId = r.optString("cid").ifEmpty { null },
             )
         }
     }
@@ -27,6 +28,6 @@ object Pbdb {
 
     fun toGeoJson(sites: List<Site>): String = sites.joinToString(",", "{\"type\":\"FeatureCollection\",\"features\":[", "]}") {
         val name = it.name.replace("\"", "'")
-        "{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[${it.lon},${it.lat}]},\"properties\":{\"name\":\"$name\",\"formation\":\"${it.formation ?: ""}\"}}"
+        "{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[${it.lon},${it.lat}]},\"properties\":{\"name\":\"$name\",\"oid\":\"${it.id}\",\"cid\":\"${it.collectionId ?: ""}\",\"formation\":\"${it.formation ?: ""}\"}}"
     }
 }

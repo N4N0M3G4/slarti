@@ -30,6 +30,9 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.georecon.app.capture.CaptureStore
+import com.georecon.app.capture.LocalCaptures
+import com.georecon.app.data.Capture
+import com.georecon.app.data.Site
 import com.georecon.app.capture.readLocation
 import com.georecon.app.capture.readOrientation
 import com.georecon.app.BuildConfig
@@ -67,6 +70,16 @@ fun GeoReconApp() = SpyTheme {
     var fossilOpacity by remember { mutableStateOf(ui.getFloat("op.fossil", 0.25f)) }
     var showLayers by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { AreaCache.applyAmbientCap(ctx) }
+    var captures by remember { mutableStateOf<List<Capture>>(emptyList()) }
+    LaunchedEffect(Unit) { captures = withContext(Dispatchers.IO) { LocalCaptures.list(ctx) } }
+    var tappedCapture by remember { mutableStateOf<Capture?>(null) }
+    var tappedFossil by remember { mutableStateOf<Triple<String, String, String>?>(null) }
+    var sites by remember { mutableStateOf<List<Site>>(emptyList()) }
+    mapController.onFeatureTap = { kind, id, cid, name ->
+        if (kind == "capture") tappedCapture = captures.firstOrNull { it.id == id }
+        else tappedFossil = Triple(id, cid, name)
+    }
+    mapController.onSites = { sites = it }
 
     fun setPin(p: Pin?) {
         pin = p
@@ -83,6 +96,7 @@ fun GeoReconApp() = SpyTheme {
             val o = readOrientation(ctx)
             val c = withContext(Dispatchers.IO) { CaptureStore.finalize(file, id, System.currentTimeMillis(), loc, o) }
             UploadWorker.enqueue(ctx)
+            captures = withContext(Dispatchers.IO) { LocalCaptures.list(ctx) }
             status = if (loc == null) "SAVED ${c.id.take(8)} (NO GPS)" else "SAVED ${c.id.take(8)} ±${c.hAccM?.toInt()}m"
         }
     }
@@ -123,9 +137,13 @@ fun GeoReconApp() = SpyTheme {
     Box(Modifier.fillMaxSize().background(Spy.Black)) {
         MapScreen(
             showGeology = geology, showFossils = fossils, pin = pin, controller = mapController,
-            basemap = basemap, geologyOpacity = geoOpacity, fossilOpacity = fossilOpacity, modifier = Modifier.fillMaxSize(),
+            basemap = basemap, geologyOpacity = geoOpacity, fossilOpacity = fossilOpacity, captures = captures, modifier = Modifier.fillMaxSize(),
         )
         if (fog) FogOverlay()
+        tappedCapture?.let { c -> CaptureDialog(c, java.io.File(CaptureStore.dir(ctx), "${c.id}.jpg")) { tappedCapture = null } }
+        tappedFossil?.let { (oid, cid, name) ->
+            FossilDialog(oid, name, sites.filter { cid.isNotEmpty() && it.collectionId == cid }) { tappedFossil = null }
+        }
         Column(
             // Edge-to-edge: keep the HUD clear of the status bar, cutouts and nav bar.
             Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(horizontal = 12.dp, vertical = 8.dp),
