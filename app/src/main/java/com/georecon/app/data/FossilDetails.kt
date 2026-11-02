@@ -14,6 +14,7 @@ data class FossilInfo(
     val collection: String, val place: String, val precision: String, val reference: String,
     val occUrl: String, val collUrl: String, val taxonNo: String,
     val silhouette: Picture? = null, val images: List<Picture> = emptyList(),
+    val museum: List<Picture> = emptyList(), val smithsonian: List<Picture> = emptyList(),
 )
 
 /** PBDB occurrence details + PhyloPic silhouette + GBIF specimen photos, fetched lazily and cached. */
@@ -25,6 +26,8 @@ object FossilDetails {
         "Foraminifera" to "foraminifer", "Brachiopoda" to "brachiopod", "Malacostraca" to "crab or shrimp",
     )
     private val cache = ConcurrentHashMap<String, FossilInfo>()
+    /** api.data.gov key for Smithsonian Open Access; empty = source off. */
+    var smithsonianKey: String = ""
 
     private fun JSONObject.s(k: String) = optString(k).takeIf { it.isNotEmpty() && it != "null" }
     private fun ma(v: Double) = if (v.isNaN()) "?" else "%.1f".format(v)
@@ -83,6 +86,40 @@ object FossilDetails {
         return out
     }
 
+    /** iDigBio media items -> pictures (https, one per specimen record). */
+    fun idigbioImages(items: org.json.JSONArray?, n: Int = 4, where: String = ""): List<Picture> {
+        val out = mutableListOf<Picture>(); val seen = HashSet<String>()
+        for (i in 0 until (items?.length() ?: 0)) {
+            val it = items!!.getJSONObject(i)
+            val t = it.optJSONObject("indexTerms") ?: JSONObject(); val d = it.optJSONObject("data") ?: JSONObject()
+            val src = t.s("accessuri") ?: d.s("ac:accessURI") ?: continue
+            val rec = t.optJSONArray("records")?.optString(0) ?: ""
+            if (!src.startsWith("https://") || !seen.add(rec)) continue
+            out += Picture(src, d.s("xmpRights:Owner") ?: d.s("dc:creator") ?: d.s("dcterms:title") ?: "iDigBio publisher",
+                shortLicense(t.s("rights") ?: d.s("dcterms:rights") ?: d.s("xmpRights:UsageTerms")), where,
+                if (rec.isNotEmpty()) "https://portal.idigbio.org/portal/records/$rec" else "https://portal.idigbio.org")
+            if (out.size >= n) break
+        }
+        return out
+    }
+
+    /** Smithsonian Open Access rows -> pictures (only with an api.data.gov key). */
+    fun smithsonianImages(rows: org.json.JSONArray?, n: Int = 4): List<Picture> {
+        val out = mutableListOf<Picture>()
+        for (i in 0 until (rows?.length() ?: 0)) {
+            val r = rows!!.getJSONObject(i)
+            val dn = r.optJSONObject("content")?.optJSONObject("descriptiveNonRepeating") ?: continue
+            val media = dn.optJSONObject("online_media")?.optJSONArray("media") ?: continue
+            val m = (0 until media.length()).map { media.getJSONObject(it) }.firstOrNull {
+                it.optString("type") == "Images" && (it.s("thumbnail") ?: it.s("content") ?: "").startsWith("https://")
+            } ?: continue
+            out += Picture(m.s("thumbnail") ?: m.getString("content"), dn.s("data_source") ?: "Smithsonian",
+                m.optJSONObject("usage")?.s("access") ?: "see record", r.s("title") ?: "", dn.s("record_link") ?: "https://www.si.edu/openaccess")
+            if (out.size >= n) break
+        }
+        return out
+    }
+
     private fun get(url: String): JSONObject {
         val c = NetGuard.check(url).openConnection() as HttpURLConnection
         c.connectTimeout = 10_000; c.readTimeout = 15_000
@@ -109,7 +146,18 @@ object FossilDetails {
             val q = URLEncoder.encode(info.taxon, "UTF-8")
             gbifImages(get("https://api.gbif.org/v1/occurrence/search?scientificName=$q&mediaType=StillImage&basisOfRecord=FOSSIL_SPECIMEN&limit=20").optJSONArray("results"))
         }.getOrDefault(emptyList())
-        info = info.copy(silhouette = sil, images = imgs)
+        val museum = runCatching {
+            fun q(rq: String) = get("https://search.idigbio.org/v2/search/media/?rq=${URLEncoder.encode(rq, "UTF-8")}&limit=12").optJSONArray("items")
+            val name = JSONObject.quote(info.taxon.lowercase())
+            val ca = idigbioImages(q("{\"scientificname\":$name,\"stateprovince\":\"california\"}"), where = "California")
+            if (ca.size >= 2) ca else (ca + idigbioImages(q("{\"scientificname\":$name}"))).distinctBy { it.src }.take(4)
+        }.getOrDefault(emptyList())
+        val si = if (smithsonianKey.isBlank()) emptyList() else runCatching {
+            val q = URLEncoder.encode("${info.taxon} AND online_media_type:Images", "UTF-8")
+            smithsonianImages(get("https://api.si.edu/openaccess/api/v1.0/search?q=$q&rows=10&api_key=${URLEncoder.encode(smithsonianKey, "UTF-8")}")
+                .optJSONObject("response")?.optJSONArray("rows"))
+        }.getOrDefault(emptyList())
+        info = info.copy(silhouette = sil, images = imgs, museum = museum, smithsonian = si)
         cache[id] = info
         return info
     }

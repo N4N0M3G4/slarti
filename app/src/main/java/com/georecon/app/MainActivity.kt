@@ -17,6 +17,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         MapLibre.getInstance(this)
+        com.georecon.app.data.FossilDetails.smithsonianKey = BuildConfig.SI_API_KEY
         handlePairing(intent)
         UploadWorker.enqueue(this)
         setContent { GeoReconApp() }

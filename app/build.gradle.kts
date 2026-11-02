@@ -16,6 +16,10 @@ android {
         val arcgisKey = rootProject.file("local.properties").takeIf { it.exists() }?.readLines()
             ?.firstOrNull { it.startsWith("arcgis.apiKey=") }?.substringAfter("=")?.trim() ?: ""
         buildConfigField("String", "ARCGIS_API_KEY", "\"$arcgisKey\"")
+        // Optional api.data.gov key for Smithsonian Open Access images: local.properties si.apiKey=...
+        val siKey = rootProject.file("local.properties").takeIf { it.exists() }?.readLines()
+            ?.firstOrNull { it.startsWith("si.apiKey=") }?.substringAfter("=")?.trim() ?: ""
+        buildConfigField("String", "SI_API_KEY", "\"$siKey\"")
     }
     buildFeatures { compose = true; buildConfig = true }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }

@@ -112,13 +112,10 @@ fun FossilDialog(oid: String, name: String, siblings: List<Site>, onDismiss: () 
                     Link("Wikipedia: ${w.title} · CC BY-SA 4.0", w.url)
                 }
                 d.silhouette?.let { Text("Silhouette: PhyloPic · ${it.credit} · ${it.license}", color = Spy.CyanDim, fontFamily = Mono, fontSize = 10.sp) }
-                if (d.images.isNotEmpty()) {
-                    Text("SPECIMEN PHOTOS (GBIF)", color = Spy.Amber, fontFamily = Mono, fontSize = 11.sp)
-                    d.images.forEach { img ->
-                        AsyncImage(model = img.src, contentDescription = "${d.taxon} specimen", modifier = Modifier.fillMaxWidth().height(160.dp), contentScale = ContentScale.Crop)
-                        Link("${img.credit} · ${img.license}${if (img.where.isNotBlank()) " · ${img.where}" else ""}", img.link)
-                    }
-                }
+                Fossil3dSlot.content(d)
+                Pictures("SPECIMEN PHOTOS (GBIF)", d.images, d.taxon)
+                Pictures("MUSEUM SPECIMENS (iDigBio)", d.museum, d.taxon)
+                Pictures("SMITHSONIAN OPEN ACCESS", d.smithsonian, d.taxon)
             }
         }
         if (siblings.size > 1) {
@@ -149,6 +146,15 @@ fun GeoUnitDialog(lat: Double, lon: Double, onDismiss: () -> Unit) {
                 Field("Strat. name", u.strat); Field("Age", u.age); Field("Lithology", u.lith)
                 Field("Description", u.description); Field("Point", "%.5f, %.5f".format(lat, lon))
                 Link("Macrostrat ↗ · source ${u.sourceId} · CC BY 4.0", "https://macrostrat.org/map/loc/%.4f/%.4f".format(lon, lat))
+                var lex by remember(u) { mutableStateOf<List<com.georecon.app.data.Lexicon>>(emptyList()) }
+                LaunchedEffect(u) { lex = withContext(Dispatchers.IO) { u.stratNameIds.take(2).mapNotNull { GeoLookups.lexicon(it) } } }
+                lex.forEach { x ->
+                    Text("LEXICON · ${x.longName}", color = Spy.Amber, fontFamily = Mono, fontSize = 11.sp)
+                    Field("Rank", x.rank); Field("Age range", x.range); Field("Rock mix", x.lithology)
+                    Field("Environments", x.environments); Field("Max thickness", x.maxThicknessM?.let { "$it m" } ?: "")
+                    Field("Columns", if (x.columns > 0) "${x.columns} Macrostrat column units" else "")
+                    Link("Macrostrat lexicon ↗ · CC BY 4.0", x.url)
+                }
             }
         }
     }
@@ -168,4 +174,22 @@ fun Legend() = Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
     Item({ Box(Modifier.size(12.dp).border(2.dp, Spy.Cyan, dot).background(Color.Black, dot)) }, "Fossil occurrence (PBDB). Tap for details + pictures.")
     Item({ Box(Modifier.size(12.dp).background(Spy.Amber, dot).border(2.dp, Color.Black, dot)) }, "Your photo. Tap to view.")
     Item({ Box(Modifier.size(16.dp).background(Spy.Amber, dot).border(3.dp, Color.Black, dot)) }, "Current pin (search or ◎ GPS).")
+}
+
+@Composable
+private fun Pictures(title: String, pics: List<com.georecon.app.data.Picture>, taxon: String) {
+    if (pics.isEmpty()) return
+    Text(title, color = Spy.Amber, fontFamily = Mono, fontSize = 11.sp)
+    pics.forEach { img ->
+        AsyncImage(model = img.src, contentDescription = "$taxon specimen", modifier = Modifier.fillMaxWidth().height(160.dp), contentScale = ContentScale.Crop)
+        Link("${img.credit} · ${img.license}${if (img.where.isNotBlank()) " · ${img.where}" else ""}", img.link)
+    }
+}
+
+/**
+ * Hook for the fossil3d module (~/personal/geo-recon/fossil3d/): set [content]
+ * to a composable that renders a 3D model for the occurrence. Empty by default.
+ */
+object Fossil3dSlot {
+    var content: @Composable (FossilInfo) -> Unit = {}
 }

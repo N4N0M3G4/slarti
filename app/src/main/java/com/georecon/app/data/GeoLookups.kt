@@ -6,7 +6,8 @@ import java.net.HttpURLConnection
 import java.net.URLEncoder
 import java.util.concurrent.ConcurrentHashMap
 
-data class GeoUnit(val name: String, val strat: String, val age: String, val lith: String, val description: String, val color: Int, val sourceId: String)
+data class GeoUnit(val name: String, val strat: String, val age: String, val lith: String, val description: String, val color: Int, val sourceId: String, val stratNameIds: List<Int> = emptyList())
+data class Lexicon(val longName: String, val rank: String, val range: String, val lithology: String, val environments: String, val maxThicknessM: Int?, val columns: Int, val url: String)
 data class WikiSummary(val title: String, val extract: String, val url: String)
 
 /** Macrostrat unit at a point and Wikipedia taxon summaries (no keys). Blocking: call off main. */
@@ -27,6 +28,38 @@ object GeoLookups {
             age = "${interval ?: "unknown"} (${age(u.optDouble("b_age"))}–${age(u.optDouble("t_age"))} Ma)",
             lith = u.s("lith") ?: "", description = u.s("descrip") ?: "",
             color = (0xFF000000 or color.substring(1).toLong(16)).toInt(), sourceId = u.s("source_id") ?: "",
+            stratNameIds = u.optJSONArray("strat_names")?.let { a -> (0 until a.length()).map { a.optInt(it) }.filter { it > 0 } } ?: emptyList(),
+        )
+    }
+
+    /** Strat-name definition + its column units -> one summary. */
+    fun summarizeLexicon(def: JSONObject?, units: org.json.JSONArray?): Lexicon? {
+        def ?: return null
+        val n = units?.length() ?: 0
+        val lith = LinkedHashMap<String, Double>(); val env = LinkedHashSet<String>(); var maxT = 0
+        for (i in 0 until n) {
+            val u = units!!.getJSONObject(i)
+            maxT = maxOf(maxT, u.optInt("max_thick"))
+            u.optJSONArray("lith")?.let { a -> for (j in 0 until a.length()) a.getJSONObject(j).let { l -> lith[l.getString("name")] = (lith[l.getString("name")] ?: 0.0) + l.optDouble("prop", 0.0) / n } }
+            u.optJSONArray("environ")?.let { a -> for (j in 0 until a.length()) a.getJSONObject(j).s("name")?.let(env::add) }
+        }
+        fun ma(v: Double) = if (v.isNaN()) "?" else "%.1f".format(v)
+        val bp = def.s("b_period"); val tp = def.s("t_period")
+        return Lexicon(
+            longName = def.s("strat_name_long") ?: def.s("strat_name") ?: "?",
+            rank = mapOf("Fm" to "Formation", "Mbr" to "Member", "Gp" to "Group", "SGp" to "Supergroup", "Bed" to "Bed")[def.s("rank")] ?: def.s("rank") ?: "",
+            range = "${ma(def.optDouble("b_age"))}–${ma(def.optDouble("t_age"))} Ma (${bp ?: "?"}${if (tp != null && tp != bp) "–$tp" else ""})",
+            lithology = lith.entries.sortedByDescending { it.value }.joinToString(", ") { "${it.key} ${Math.round(it.value * 100)}%" },
+            environments = env.joinToString(", "), maxThicknessM = maxT.takeIf { it > 0 }, columns = n,
+            url = def.s("concept_id")?.let { "https://macrostrat.org/lex/strat-name-concepts/$it" } ?: "https://macrostrat.org/lex/strat-names/${def.optInt("strat_name_id")}",
+        )
+    }
+
+    private val lexicons = ConcurrentHashMap<Int, Lexicon?>()
+    fun lexicon(id: Int): Lexicon? = lexicons.getOrPut(id) {
+        summarizeLexicon(
+            get("https://macrostrat.org/api/v2/defs/strat_names?strat_name_id=$id")?.optJSONObject("success")?.optJSONArray("data")?.optJSONObject(0),
+            get("https://macrostrat.org/api/v2/units?strat_name_id=$id&response=long")?.optJSONObject("success")?.optJSONArray("data"),
         )
     }
 
