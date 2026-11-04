@@ -1,6 +1,6 @@
 # Slarti
 
-The Geo Recon phone app: a cheerful Android field app for **rockhounds and fossil hunters**. It shows the rocks and fossils around you, takes geotagged photos, and guides you through a photogrammetry scan of a find. It sends everything to the [Magrathea hub](https://github.com/dyodji/geo-recon-hub) on your laptop.
+The Geo Recon phone app: a cheerful Android field app for **rockhounds and fossil hunters**. It shows the rocks and fossils around you, takes geotagged photos, and guides you through a photogrammetry scan of a find. It sends everything to the [Magrathea hub](https://github.com/dyodji/magrathea) on your laptop.
 
 ## What it does
 
@@ -19,8 +19,8 @@ The Geo Recon phone app: a cheerful Android field app for **rockhounds and fossi
 You need JDK 17 and the Android SDK (API 34/35).
 
 ```bash
-git clone https://github.com/dyodji/geo-recon-app.git
-cd geo-recon-app
+git clone https://github.com/dyodji/slarti.git
+cd slarti
 ./gradlew assembleDebug
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
@@ -51,4 +51,4 @@ Slarti is short for Slartibartfast, the coastline designer in Douglas Adams' *Th
 
 The hub this app talks to is built on [God's Eye View](https://github.com/bilawalsidhu/gods-eye-view) by **Bilawal Sidhu** (MIT License).
 
-Data shown in the app keeps its own license. Macrostrat and PBDB are CC BY 4.0. OpenStreetMap data via OpenFreeMap is ODbL. Esri imagery follows Esri's terms. The code license does not cover data. Some optional hub data bundles are non-commercial (CC BY-NC); see the hub's [DATA_SOURCES.md](https://github.com/dyodji/geo-recon-hub/blob/geo-recon/DATA_SOURCES.md).
+Data shown in the app keeps its own license. Macrostrat and PBDB are CC BY 4.0. OpenStreetMap data via OpenFreeMap is ODbL. Esri imagery follows Esri's terms. The code license does not cover data. Some optional hub data bundles are non-commercial (CC BY-NC); see the hub's [DATA_SOURCES.md](https://github.com/dyodji/magrathea/blob/geo-recon/DATA_SOURCES.md).
