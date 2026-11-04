@@ -12,7 +12,24 @@ The Geo Recon phone app: a cheerful Android field app for **rockhounds and fossi
 - **Upload to the hub.** Pair once by scanning the hub's QR code. Photos and scans upload on unmetered Wi-Fi, only to the paired LAN hub, and resume after a break.
 - **Fog of war.** The map starts dark and reveals as you explore.
 
-**Screenshots.** None yet. This is a native Android app with no web or desktop mode, so we could not capture it on the laptop. Run it on a phone or an Android emulator to see it.
+## 3D scanning
+
+SCAN OBJECT turns the phone into a guided photogrammetry scanner for a fossil or rock.
+
+- **Set up.** Put the piece on the printed scale sheet (a ChArUco board) and aim from about 30 cm.
+- **Coverage dome.** The dome has 3 rings of 12 sectors each. A sector is done when it has 2 sharp frames, so you can see which angles you still need.
+- **Auto-capture.** The app takes a frame by itself every 8 degrees of movement, but only when the phone turns slower than 20 degrees a second, the light is good, and the image is sharp. It calibrates sharpness on the first 3 frames.
+- **Friendly coaching.** One hint at a time: "WHEE, TOO FAST · SLOW DOWN", "A BIT DARK · ADD LIGHT", "LOVELY · KEEP ORBITING". A haptic tick confirms each kept frame.
+- **Flip side.** When one side is done: "SIDE DONE, SPLENDID! · FLIP THE PIECE". Scan the other side for a full model.
+- **Photogrammetry-ready output.** Each frame has its ARCore camera pose and lens intrinsics, so the hub's COLMAP step starts with good camera guesses. The app writes frames one by one, with bounded memory, and uploads can resume after a break.
+- **On the hub.** Magrathea rebuilds a mesh and places the piece on a 3D model of a whole specimen. See the [giant oyster example](https://github.com/dyodji/magrathea/tree/geo-recon#example-a-giant-oyster).
+
+**Next for scanning.** We compared open-source scan apps (November 2026). None of them is a better Android base, so we keep ours and borrow UI ideas:
+- a progress dial on the ground under the object, with low, middle and high passes (like Apple's Guided Capture sample);
+- a live "shell" of ARCore feature points that fills in as you scan (code from Google's ARCore samples, Apache-2.0);
+- a wireframe preview of the hub's first rough mesh, so you can see gaps and rescan them.
+
+**Screenshots.** None yet. This is a native Android app, and the scan needs a real camera with ARCore. Screenshots will come from a phone run.
 
 ## Quick start
 
