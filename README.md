@@ -1,6 +1,6 @@
-# Geo Recon phone app
+# Slarti
 
-An Android field app for **rockhounds and fossil hunters**. It shows the rocks and fossils around you, takes geotagged photos, and guides you through a photogrammetry scan of a find. It sends everything to the [Geo Recon hub](https://github.com/dyodji/geo-recon-hub) on your laptop.
+The Geo Recon phone app: a cheerful Android field app for **rockhounds and fossil hunters**. It shows the rocks and fossils around you, takes geotagged photos, and guides you through a photogrammetry scan of a find. It sends everything to the [Magrathea hub](https://github.com/dyodji/geo-recon-hub) on your laptop.
 
 ## What it does
 
@@ -33,7 +33,7 @@ Known gaps: scan frames are ARCore CPU images (1920x1080 on a Pixel 7), not full
 
 ## How we built it
 
-The app is our own Kotlin and Jetpack Compose code. It does not fork any app. It pairs with the Geo Recon hub, which is a fork of [God's Eye View](https://github.com/bilawalsidhu/gods-eye-view) by Bilawal Sidhu. The phone does sensing in the field (GPS, compass, camera, ARCore). The hub does the heavy work: the 3D globe, analysis and photogrammetry.
+The app is our own Kotlin and Jetpack Compose code. It does not fork any app. It pairs with the Magrathea hub, which is a fork of [God's Eye View](https://github.com/bilawalsidhu/gods-eye-view) by Bilawal Sidhu. The phone does sensing in the field (GPS, compass, camera, ARCore). The hub does the heavy work: the 3D globe, analysis and photogrammetry.
 
 Main parts: MapLibre Native (map), ARCore (scan tracking), CameraX and the system camera (photos), WorkManager (uploads).
 
@@ -42,6 +42,10 @@ Main parts: MapLibre Native (map), ARCore (scan tracking), CameraX and the syste
 - `main` is the only branch. Small commits, pushed after a local build.
 - The hub's upload API (`/api/captures`, `/api/scans`) is the contract. Change it in both repos in the same session.
 - We own all code here. Track MapLibre, ARCore and AndroidX versions in `gradle/` and update them a few times a year.
+
+## The name
+
+Slarti is short for Slartibartfast, the coastline designer in Douglas Adams' *The Hitchhiker's Guide to the Galaxy*. The hub is Magrathea. This is a fan nod for a personal project, not affiliated with the Douglas Adams estate.
 
 ## Credits and license
 

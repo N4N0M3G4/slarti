@@ -88,7 +88,7 @@ fun FossilDialog(oid: String, name: String, siblings: List<Site>, onDismiss: () 
         val d = info
         when {
             error != null -> Text("Could not load details: $error", color = Spy.Amber, fontFamily = Mono, fontSize = 11.sp)
-            d == null -> Text("Loading PBDB record…", color = Spy.CyanDim, fontFamily = Mono, fontSize = 11.sp)
+            d == null -> Text("Fetching this fossil's paperwork… nearly there!", color = Spy.CyanDim, fontFamily = Mono, fontSize = 11.sp)
             else -> {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     d.silhouette?.let {
@@ -136,8 +136,8 @@ fun GeoUnitDialog(lat: Double, lon: Double, onDismiss: () -> Unit) {
     SpyDialog("GEOLOGIC UNIT", onDismiss) {
         val u = unit
         when {
-            !done -> Text("Asking Macrostrat…", color = Spy.CyanDim, fontFamily = Mono, fontSize = 11.sp)
-            u == null -> Text("No mapped unit here (or offline).", color = Spy.Amber, fontFamily = Mono, fontSize = 11.sp)
+            !done -> Text("Asking Macrostrat what you are standing on…", color = Spy.CyanDim, fontFamily = Mono, fontSize = 11.sp)
+            u == null -> Text("No mapped rock here (or we are offline). Uncharted ground!", color = Spy.Amber, fontFamily = Mono, fontSize = 11.sp)
             else -> {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(Modifier.size(18.dp).background(Color(u.color)).border(1.dp, Color(0xFFBFEFFF)))

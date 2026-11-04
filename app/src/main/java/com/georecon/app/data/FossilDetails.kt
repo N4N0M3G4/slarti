@@ -123,7 +123,7 @@ object FossilDetails {
     private fun get(url: String): JSONObject {
         val c = NetGuard.check(url).openConnection() as HttpURLConnection
         c.connectTimeout = 10_000; c.readTimeout = 15_000
-        c.setRequestProperty("User-Agent", "GEO-RECON (personal)")
+        c.setRequestProperty("User-Agent", "Slarti (personal)")
         return c.inputStream.bufferedReader().use { JSONObject(it.readText()) }
     }
 

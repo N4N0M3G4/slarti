@@ -101,7 +101,7 @@ fun GeoReconApp() = SpyTheme {
 
     val takePicture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
         val (id, file) = pending ?: return@rememberLauncherForActivityResult
-        if (!ok) { status = "CAPTURE CANCELLED"; file.delete(); return@rememberLauncherForActivityResult }
+        if (!ok) { status = "CAPTURE CANCELLED · NO HARM DONE"; file.delete(); return@rememberLauncherForActivityResult }
         scope.launch {
             val hasLoc = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
             val loc = if (hasLoc) readLocation(ctx) else null
@@ -123,9 +123,9 @@ fun GeoReconApp() = SpyTheme {
     fun useGps() = scope.launch {
         status = "LOCATING…"
         val loc = readLocation(ctx)
-        if (loc == null) { status = "NO GPS FIX"; return@launch }
+        if (loc == null) { status = "NO GPS FIX YET · TRY MORE SKY"; return@launch }
         setPin(Pin.of(loc.latitude, loc.longitude, "MY LOCATION ±${loc.accuracy.toInt()}m", "gps", pin?.locked ?: true))
-        status = "PIN SET FROM GPS"
+        status = "PIN SET FROM GPS · HELLO, YOU!"
     }
     val locPerm = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) useGps() else status = "LOCATION PERMISSION DENIED"

@@ -82,7 +82,7 @@ fun ScanScreen(onExit: (String) -> Unit) {
             if (engine.frameNo > 0) store.markComplete()
         }
         UploadWorker.enqueue(ctx)
-        onExit(if (engine.frameNo > 0) "SCAN SAVED · ${engine.frameNo} FRAMES · ${sides.size} SIDE(S)" else "SCAN CANCELLED")
+        onExit(if (engine.frameNo > 0) "SCAN SAVED · ${engine.frameNo} FRAMES · ${sides.size} SIDE(S)" else "SCAN CANCELLED · NO HARM DONE")
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {

@@ -33,7 +33,7 @@ class MainActivity : ComponentActivity() {
         val data = intent?.data?.toString() ?: return
         val pairing = HubPairing.parse(data)
         if (pairing == null) {
-            Toast.makeText(this, "Pairing link not valid: hub must be on your local network", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "That pairing link won't do: the hub must be on your local network", Toast.LENGTH_LONG).show()
             return
         }
         HubPrefs.save(this, pairing)

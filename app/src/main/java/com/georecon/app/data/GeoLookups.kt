@@ -68,7 +68,7 @@ object GeoLookups {
     private fun get(url: String): JSONObject? = runCatching {
         val c = NetGuard.check(url).openConnection() as HttpURLConnection
         c.connectTimeout = 8_000; c.readTimeout = 12_000
-        c.setRequestProperty("User-Agent", "GEO-RECON (personal)")
+        c.setRequestProperty("User-Agent", "Slarti (personal)")
         if (c.responseCode !in 200..299) null else c.inputStream.bufferedReader().use { JSONObject(it.readText()) }
     }.getOrNull()
 
