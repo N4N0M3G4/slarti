@@ -4,6 +4,13 @@ The Geo Recon phone app: a cheerful Android field app for **rockhounds and fossi
 
 ## What it does
 
+<p>
+<img src="docs/screenshots/field-map.png" alt="Slarti field map over Henry Cowell Redwoods State Park with Macrostrat geology on satellite, a pin and a fossil dot" width="200">
+<img src="docs/screenshots/fossil-details.png" alt="Fossil details for Cucullaea mathewsonii, a Paleocene clam from the Locatelli Formation at Henry Cowell Redwoods" width="200">
+<img src="docs/screenshots/geologic-unit.png" alt="Geologic unit details: Cretaceous quartz diorite, from Macrostrat" width="200">
+<img src="docs/screenshots/legend.png" alt="Map key explaining geology colors, fossil dots, photo dots and the pin" width="200">
+</p>
+
 - **Field map.** MapLibre map with STREETS, DARK and SAT basemaps (SAT needs an Esri key). Works offline in one saved area (3 km around your pin).
 - **Geology and fossils.** Macrostrat geologic map with an opacity slider. Tap a unit for its name, age and description. PBDB fossil occurrences; tap one for details. iDigBio specimens and Wikipedia summaries add context.
 - **Pin, zoom lock, recenter.** Search an address or use GPS.
@@ -15,6 +22,13 @@ The Geo Recon phone app: a cheerful Android field app for **rockhounds and fossi
 ## 3D scanning
 
 SCAN OBJECT turns the phone into a guided photogrammetry scanner for a fossil or rock.
+
+<p>
+<img src="docs/screenshots/scan-setup.png" alt="Scan setup: place the piece on the scale sheet, choose ChArUco, ruler or quarter as scale, then tap start" width="220">
+<img src="docs/screenshots/scan-coverage.png" alt="Scan running: LOVELY, KEEP ORBITING coaching, frame and cell counters, and the coverage dome" width="220">
+</p>
+
+Screenshots are from a Pixel 7 (November 2026). The scan shots show the screen before a piece was placed, so the dome is still empty.
 
 - **Set up.** Put the piece on the printed scale sheet (a ChArUco board) and aim from about 30 cm.
 - **Coverage dome.** The dome has 3 rings of 12 sectors each. A sector is done when it has 2 sharp frames, so you can see which angles you still need.
@@ -29,7 +43,7 @@ SCAN OBJECT turns the phone into a guided photogrammetry scanner for a fossil or
 - a live "shell" of ARCore feature points that fills in as you scan (code from Google's ARCore samples, Apache-2.0);
 - a wireframe preview of the hub's first rough mesh, so you can see gaps and rescan them.
 
-**Screenshots.** None yet. This is a native Android app, and the scan needs a real camera with ARCore. Screenshots will come from a phone run.
+
 
 ## Quick start
 
